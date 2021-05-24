@@ -8,7 +8,7 @@ Original file is located at
 """
 
 # Commented out IPython magic to ensure Python compatibility.
-from google.colab import drive 
+from google.colab import drive
 drive.mount('/content/drive/')
 # %cd /content/drive/My Drive/Colab Notebooks/
 
@@ -43,8 +43,8 @@ X2 = np.array(data.iloc[:,0])
 X1=X1.reshape(-1,1)
 X2=X2.reshape(-1,1)
 
-print(X1)
-print(X2)
+#print(X1)
+#print(X2)
 
 from sklearn.model_selection import train_test_split
 input_vec_train,input_vec_test,output_label_y_train,output_label_y_test = train_test_split(X1,X2,test_size=0.1,random_state=0)
@@ -69,7 +69,7 @@ plt.rc('font', size=18); plt.rcParams['figure.constrained_layout.use'] = True
 from sklearn.neighbors import KNeighborsRegressor
 model = KNeighborsRegressor(n_neighbors=7).fit(input_vec_train, output_label_y_train)
 ypred = model.predict(input_vec_test)
-print(ypred)
+#print(ypred)
 RMSE = sqrt(metrics.mean_squared_error( output_label_y_test, ypred)) 
 print('RMSE value of the KNN Model is:', RMSE)
 
@@ -84,5 +84,33 @@ plt.scatter(input_vec_train, output_label_y_train, color='red', marker='.', line
 plt.scatter(input_vec_test, ypred, color='blue', marker='.', linewidth=0.1)
 plt.xlabel("input x"); plt.ylabel("output y")
 plt.legend(['train','predictions'])
-plt.show()
 
+
+
+# Using Smoothing Splines
+import rpy2.robjects as robjects
+r_y = robjects.FloatVector(output_label_y_train)
+r_x = robjects.FloatVector(input_vec_train)
+
+r_smooth_spline = robjects.r['smooth.spline']
+spline1 = r_smooth_spline(x=r_x, y=r_y, spar=0.5) # Changing the "spar" value effects how smooth the spline is => the larger the value the smoother (less accurate)
+
+ySpline = np.array(robjects.r['predict'](spline1, robjects.FloatVector(input_vec_test)).rx2('y'))
+
+from math import sqrt
+from sklearn import metrics
+
+RMSE = sqrt(metrics.mean_squared_error( output_label_y_test, ySpline))
+print('RMSE value of the Smoothing Spline Model is:', RMSE)
+
+
+MAPE = np.mean(np.abs((output_label_y_test - ySpline)/output_label_y_test))*100
+print('MAPE value of the Smoothing Spline Model is:', MAPE)
+
+import matplotlib.pyplot as plt
+plt.rc('font', size=18); plt.rcParams['figure.constrained_layout.use'] = True
+plt.scatter(input_vec_train, output_label_y_train, color='red', marker='.', linewidth=0.1)
+plt.scatter(input_vec_test, ySpline, color='blue', marker='.', linewidth=0.1)
+plt.xlabel("input x"); plt.ylabel("output y")
+plt.legend(['train','predictions'])
+plt.show()
