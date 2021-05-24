@@ -85,32 +85,43 @@ plt.scatter(input_vec_test, ypred, color='blue', marker='.', linewidth=0.1)
 plt.xlabel("input x"); plt.ylabel("output y")
 plt.legend(['train','predictions'])
 
+# Split data at 3 months before end for training and test data
+train = data[ (data.index < '2020-03-01 00:00:00') ]
+test = data[ (data.index >= '2020-03-01 00:00:00') ]
 
+train_x = np.array(train.index).reshape(-1,1)
+train_y = np.array(train['Weighted_Price']).reshape(-1,1)
+
+test_x = np.array(test.index).reshape(-1,1)
+test_y = np.array(test['Weighted_Price']).reshape(-1,1)
 
 # Using Smoothing Splines
 import rpy2.robjects as robjects
-r_y = robjects.FloatVector(output_label_y_train)
-r_x = robjects.FloatVector(input_vec_train)
+r_y = robjects.FloatVector(train_y)
+r_x = robjects.FloatVector(train_x)
 
 r_smooth_spline = robjects.r['smooth.spline']
 spline1 = r_smooth_spline(x=r_x, y=r_y, spar=0.5) # Changing the "spar" value effects how smooth the spline is => the larger the value the smoother (less accurate)
 
-ySpline = np.array(robjects.r['predict'](spline1, robjects.FloatVector(input_vec_test)).rx2('y'))
+ySpline = np.array(robjects.r['predict'](spline1, robjects.FloatVector(test_x)).rx2('y'))
+# Predictions for training data to show spline on graph
+ySpline2 = np.array(robjects.r['predict'](spline1, robjects.FloatVector(train_x)).rx2('y'))
 
 from math import sqrt
 from sklearn import metrics
 
-RMSE = sqrt(metrics.mean_squared_error( output_label_y_test, ySpline))
+RMSE = sqrt(metrics.mean_squared_error( test_y, ySpline))
 print('RMSE value of the Smoothing Spline Model is:', RMSE)
 
-
-MAPE = np.mean(np.abs((output_label_y_test - ySpline)/output_label_y_test))*100
+MAPE = np.mean(np.abs((test_y - ySpline)/test_y))*100
 print('MAPE value of the Smoothing Spline Model is:', MAPE)
 
 import matplotlib.pyplot as plt
 plt.rc('font', size=18); plt.rcParams['figure.constrained_layout.use'] = True
-plt.scatter(input_vec_train, output_label_y_train, color='red', marker='.', linewidth=0.1)
-plt.scatter(input_vec_test, ySpline, color='blue', marker='.', linewidth=0.1)
+plt.scatter(train_x, train_y, color='red', marker='.', linewidth=0.1)
+plt.scatter(test_x, ySpline, color='blue', marker='.', linewidth=0.1)
+plt.scatter(train_x, ySpline2, color='blue', marker='.', linewidth=0.1)
+plt.scatter(test_x, test_y, color='green', marker='.', linewidth=0.1)
 plt.xlabel("input x"); plt.ylabel("output y")
 plt.legend(['train','predictions'])
 plt.show()
